@@ -18,41 +18,43 @@ class Broker:
 
     async def pubblica(self, writer, messaggio):
 
-        print(f"[PUBBLICAZIONE]: {messaggio}")
+        logging.info(f"[PUBBLICAZIONE]: {messaggio}")
         try:
-            writer.write(f"OK {messaggio}\n".encode())
+            writer.write(f"{messaggio}\n".encode())
             await writer.drain()
         except ConnectionError:
-            print("[ERRORE] Invio fallito")
+            logging.error("Invio fallito")
 
     async def esegui_comando(self, comando, writer, indirizzo):
 
         if comando == "TEMP":
             n = random.uniform(20.0, 27.0)
-            messaggio = str(n) + "C"
+            messaggio = f"[OK] {n: .1f} C"
             await self.pubblica(writer, messaggio)
         elif comando == "UMIDITA":
             n = random.uniform(0, 100)
-            messaggio = str(n)+"%"
+            messaggio = f"[OK] {n: .1f} %"
             await self.pubblica(writer, messaggio)
         elif comando == "LED ON":
             self.stato_LED = "ON"
-            messaggio = self.stato_LED
+            messaggio = f"[OK] {self.stato_LED}"
             await self.pubblica(writer, messaggio)
         elif comando == "LED OFF":
             self.stato_LED = "OFF"
-            messaggio = self.stato_LED
+            messaggio = f"[OK] {self.stato_LED}"
             await self.pubblica(writer, messaggio)
         elif comando == "STATO":
             n = random.uniform(20.0, 27.0)
             nn = random.uniform(0, 100)
-            messaggio = str(n) + "C - " + str(nn) + "% - LED" + self.stato_LED
+            messaggio = f"[OK] {n: .1f} C - {nn: .1f} % - LED {self.stato_LED}"
             await self.pubblica(writer, messaggio)
         elif comando == "QUIT":
             logging.info(f"[DISCONNESSIONE] {indirizzo}")
             writer.close()
             await writer.wait_closed()
         else:
+            messaggio = f"[ERRORE] Comando sconosciuto: {comando}"
+            await self.pubblica(writer, messaggio)
             logging.error(f"[ERRORE] Comando sconosciuto: {comando}")
 
     async def gestisci_client(self, reader, writer):
@@ -65,7 +67,6 @@ class Broker:
                 if not dati:
                     break
                 comando = dati.decode().strip()
-                print(comando)
                 logging.info(f"[RICEVUTO] {comando} da {indirizzo}")
                 await self.esegui_comando(comando, writer, indirizzo)
         except ConnectionError:
